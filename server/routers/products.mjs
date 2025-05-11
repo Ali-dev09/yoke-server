@@ -134,14 +134,14 @@ import express from 'express'
 import Product from '../schemas/Product.mjs'
 const escapeStringRegexp = (await import('escape-string-regexp')).default;
 
-const router = express.Router()
+const router = express.Router();
 
 router.post('/add/product', async (req, res) => {
   try {
     if (!req.body) {
       return res.status(400).json({ error: 'Request body is missing' });
     }
-    const product = new NewProduct(req.body);
+    const product = new Product(req.body);
     await product.save();
     res.status(201).json({
       message: 'Product added successfully',
@@ -165,10 +165,10 @@ router.post('/add/product', async (req, res) => {
 
 router.get('/api/products', async (req, res) => {
   try {
-    const products = await NewProduct.find();
+    const products = await Product.find();
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: 'Server error', details: err.message })
+    res.status(500).json({ error: 'Server error', details: err.message });
   }
 });
 
@@ -201,7 +201,7 @@ router.get('/category/:categoryName', async (req, res) => {
     if (!allowedCategories.includes(categoryName)) {
       return res.status(400).json({ error: 'Invalid category name' });
     }
-    const products = await NewProduct.find({ category: categoryName });
+    const products = await Product.find({ category: categoryName });
     res.json(products);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -214,7 +214,7 @@ router.get('/product/:productId', async (req, res) => {
     if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ error: 'Invalid product ID format' });
     }
-    const product = await NewProduct.findById(productId);
+    const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -224,24 +224,19 @@ router.get('/product/:productId', async (req, res) => {
   }
 });
 
-// Update product endpoint
-
-
-
 router.get('/search/:searchValue', async (req, res) => {
   try {
-     const searchValue = decodeURIComponent(req.params.searchValue);
-    console.log(searchValue)
+    const searchValue = decodeURIComponent(req.params.searchValue);
+    console.log(searchValue);
 
     if (!searchValue || typeof searchValue !== 'string') {
       return res.status(400).json({ error: 'Invalid search value' });
     }
 
-    // Escape and use regex for case-insensitive, unicode-aware search
     const sanitizedSearch = escapeStringRegexp(searchValue);
     const searchRegex = new RegExp(sanitizedSearch, 'iu');
 
-    const products = await NewProduct.find({
+    const products = await Product.find({
       name: { $regex: searchRegex }
     }).limit(20);
 
@@ -252,10 +247,13 @@ router.get('/search/:searchValue', async (req, res) => {
   }
 });
 
-router.get('/products/name',async (req,res) => {
-  const products = await NewProduct.find({} , {image:0})
-  res.json(products)
-})
-
+router.get('/products/name', async (req, res) => {
+  try {
+    const products = await Product.find({}, { image: 0 });
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 export default router;
