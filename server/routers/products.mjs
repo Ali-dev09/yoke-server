@@ -1,6 +1,6 @@
 
 import express from 'express'
-import NewProduct from '../schemas/Product.mjs'
+import Product from '../schemas/Product.mjs'
 const escapeStringRegexp = (await import('escape-string-regexp')).default;
 
 const router = express.Router()
