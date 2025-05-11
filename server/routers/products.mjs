@@ -43,7 +43,7 @@ router.get('/api/products', async (req, res) => {
 
 router.get('/products/explore', async (req, res) => {
   try {
-    const products = await NewProduct.find().limit(10);
+    const products = await Product.find().limit(10);
     res.json(products);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
