@@ -177,7 +177,7 @@ router.get('/products/explore', async (req, res) => {
     const products = await Product.find().limit(10);
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json(err);
   }
 });
 
