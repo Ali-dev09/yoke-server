@@ -1,10 +1,18 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt'
-import Product from '../schemas/Product.mjs'
+import Product from '../schemas/Products.mjs'
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
+import ImageKit from "imagekit";
+
 dotenv.config()
+
+const imagekit = new ImageKit({
+  publicKey: process.env.PUBLICKEY,
+  privateKey: process.env.PRIVATEKEY,
+  urlEndpoint: process.env.URLENDPOINT
+});
 
 const router = express.Router()
 
@@ -51,7 +59,7 @@ const Admin = mongoose.model('Admin', adminSchema);
 
 router.post('/admin/login', async (req, res) => {
   const { username, password, secret } = req.body;
-  console.log(username, password, secret)
+  
 
   if (!username || !password || !secret) {
     return res.status(400).json({ message: 'Missing credentials' });
@@ -89,54 +97,69 @@ router.get('/admin/products', async (req, res) =>{
 })
 
 
+
 router.put('/product/:productId', async (req, res) => {
-    try {
-      const productId = req.params.productId;
-      if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json({ error: 'Invalid product ID format' });
-      }
+  try {
+    const formData = req.body;
+    const productId = req.params.productId;
 
-      const product = await Product.findById(productId);
-      if (!product) return res.status(404).json({ error: 'Product not found' });
-
-      // If admin wants to update the image
-      if (req.body.image) {
-        // Delete old image from ImageKit if it has a fileId
-        if (product.imageId) {
-          await imagekit.deleteFile(product.imageId);
-        }
-
-        // Upload new image
-        const uploadResponse = await imagekit.upload({
-          file: req.body.image, // base64 string or file
-          fileName: `${product.id}`
-        });
-
-        product.image = uploadResponse.url;
-        product.imageId = uploadResponse.fileId; // save fileId for future deletions
-      }
-
-      // Update other fields
-      const fieldsToUpdate = ['name','price','description','origin','hasSizes','sizes','category','stock'];
-      fieldsToUpdate.forEach(field => {
-        if (req.body[field] !== undefined) product[field] = req.body[field];
-      });
-
-      await product.save();
-
-      res.json({
-        message: 'Product updated successfully',
-        product
-      });
-
-    } catch (err) {
-      if (err.name === 'ValidationError') {
-        return res.status(400).json({ error: 'Validation error', details: err.message });
-      }
-      res.status(500).json({ error: 'Server error', details: err.message }
-                           );
+    if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: 'Invalid product ID format' });
     }
-  });
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    // 🔁 Handle image update only if a new image is provided and it’s different
+    if (formData.image && formData.image !== product.image) {
+      // 🗑 Delete old image from ImageKit
+      if (product.imageId) {
+        try {
+          await imagekit.deleteFile(product.imageId);
+        } catch (err) {
+          console.warn("Failed to delete old image from ImageKit:", err.message);
+        }
+      }
+
+      // ⬆️ Upload new image
+      const uploadResponse = await imagekit.upload({
+        file: formData.image, // base64 string
+        fileName: `${productId}`,
+        folder:"yokestore-_products"
+      });
+
+      product.image = uploadResponse.url;
+      product.imageId = uploadResponse.fileId;
+    }
+
+    // 📝 Update other fields
+    const fieldsToUpdate = [
+      'name', 'price', 'description', 'origin', 'hasSizes',
+      'sizes', 'category', 'stock'
+    ];
+
+    fieldsToUpdate.forEach(field => {
+      if (formData[field] !== undefined) {
+        product[field] = formData[field];
+      }
+    });
+
+    await product.save();
+
+    res.json({
+      message: 'Product updated successfully',
+      product
+    });
+
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Validation error', details: err.message });
+    }
+    console.error("Update error:", err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
 // Delete product endpoint
 router.delete('/product/:productId', async (req, res) => {
   try {
@@ -158,7 +181,10 @@ router.delete('/product/:productId', async (req, res) => {
 
 
 
-
+router.get('/admin/products' , async (req, res) =>{
+  const products = await  Product.find({} , {_id:1})
+  res.json(products)
+})
 
 
 export default router;

@@ -8,9 +8,9 @@ const router = express.Router();
 
 // إعداد ImageKit
 const imagekit = new ImageKit({
-  publicKey: 'public_e8C36zxt8yS/VbH1AehiM/ubTo4=',
-  privateKey: 'private_zL4Pmw+kwXnx/FcUg+0/9xzFjKg=',
-  urlEndpoint: 'https://ik.imagekit.io/fh8ayieth9'
+  publicKey: process.env.PUBLICKEY,
+  privateKey: process.env.PRIVATEKEY,
+  urlEndpoint: process.env.URLENDPOINT
 });
 
 // إضافة منتج جديد
@@ -23,14 +23,16 @@ router.post('/add/product', async (req, res) => {
     const upladres = await imagekit.upload({
       file: uploadedImage,
       fileName: req.body.name,
-      folder:'products'
+      folder:'yokestore_products'
     })
     const imageUrl = upladres.url;
+    const imageId = upladres.fileId
     let product = new Product({
       name: req.body.name,
       price: req.body.price,
       description: req.body.description,
       image: imageUrl,
+      imageId: imageId,
       origin: req.body.origin,
       hasSizes: req.body.hasSizes,
       sizes: req.body.sizes,
@@ -158,112 +160,6 @@ router.get('/products/name', async (req, res) => {
 
 // ✅ تحويل صورة منتج واحد من Base64 إلى ImageKit 
 
-router.get('/convert', async (req, res) => {
-  try {
-    const converteds = [];
-    const products = await NewProduct.find();
-    console.log(`📦 Found ${products.length} products`);
-
-    for (const product of products) {
-      if (!product.image) continue;
-
-      try {
-        const base64Data = product.image.includes(',')
-          ? product.image.split(',')[1]
-          : product.image;
-
-        const imageBuffer = Buffer.from(base64Data, 'base64');
-        const imageName = `${product._id}`;
-
-        const uploadRes = await imagekit.upload({
-          file: imageBuffer,
-          fileName: imageName,
-          folder: 'yokestore_products'
-        });
-
-        // Create a product object for response only
-        const productData = {
-          name: product.name,
-          price: product.price,
-          description: product.description,
-          image: uploadRes.url,
-          imageId: uploadRes.fileId,
-          origin: product.origin,
-          hasSizes: product.hasSizes,
-          sizes: product.sizes,
-          category: product.category,
-          stock: product.stock
-        };
-
-        converteds.push(productData);
-        const updatedproduct = new Product(productData);
-        await updatedproduct.save();
-        console.log(`📸 Converted image for ${product.name}: ${uploadRes.url}`);
-      } catch (err) {
-        console.error(`❌ Failed to convert product ${product._id}:`, err);
-      }
-    }
-
-    res.json({ 
-      message: 'Conversion completed', 
-      products: converteds
-    });
-
-  } catch (err) {
-    console.error("❌ Conversion error:", err);
-    res.status(500).json({ error: "Server error", details: err.message }  
-                                );
-  }
-});
-
-router.get('/update-fileIds', async (req, res) => {
-  try {
-    const products = await NewProduct.find();
-    console.log(`📦 Found ${products.length} products`);
-
-    const updatedProducts = [];
-
-    for (const product of products) {
-      if (!product.image || !product.image.url) continue;
-
-      try {
-        // 1️⃣ Download existing image
-        const response = await fetch(product.image.url);
-        const buffer = Buffer.from(await response.arrayBuffer());
-
-        // 2️⃣ Upload to ImageKit to get fileId
-        const uploadRes = await imagekit.upload({
-          file: buffer,
-          fileName: `${product._id}.png`,
-          folder: 'yokestore_products'
-        });
-
-        // 3️⃣ Update product with new fileId (and optional new URL)
-        product.image.fileId = uploadRes.fileId;
-        product.image.url = uploadRes.url; // optional
-        await product.save();
-
-        updatedProducts.push({
-          name: product.name,
-          url: product.image.url,
-          fileId: product.image.fileId
-        });
-
-        console.log(`✅ Updated ${product.name}`);
-      } catch (err) {
-        console.error(`❌ Failed ${product.name}:`, err);
-      }
-    }
-
-    res.json({
-      message: 'All products updated with fileId',
-      updatedProducts
-    });
-  } catch (err) {
-    console.error('Server error:', err);
-    res.status(500).json({ error: 'Server error', details: err.message });
-  }
-});
 
 
 
