@@ -34,15 +34,6 @@ function checkAuth(req, res, next) {
   }
 }
 
-//leaderstore
-//$2a$20$vyDuPmYb6N9yZVDNJckcneb7TRD2wWMQOnM98SlfZko8B7MhUDRJy
-
-//mohqa-c$%
-//$2y$19$a3pTYbYTQNJYZSYFwGnQ/OdzKcpkF8XimFd5SYOnEE/Ik4ezNqxea
-
-
-//lightbeans
-//$2y$19$v/3.T3biPChhL2m0N54P9.JItu2HA8iJfoWDCtNt7HulMVh2dhfrO
 
 const secretKey = process.env.JWT
 
