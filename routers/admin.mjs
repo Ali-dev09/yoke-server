@@ -116,7 +116,7 @@ router.put('/product/:productId', async (req, res) => {
       const uploadResponse = await imagekit.upload({
         file: formData.image, // base64 string
         fileName: `${productId}`,
-        folder:"yokestore-_products"
+        folder:"yokestore_products"
       });
 
       product.image = uploadResponse.url;
